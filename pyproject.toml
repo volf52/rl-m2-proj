@@ -1,0 +1,38 @@
+[project]
+name = "reinfproj"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [{ name = "Arslan", email = "rslnkrmt2552@gmail.com" }]
+requires-python = ">=3.11"
+dependencies = [
+  "gymnasium[all]>=1.1.0",
+  "matplotlib>=3.10.0",
+  "numpy>=2.1.2",
+  "pygame>=2.6.1",
+  "seaborn>=0.13.2",
+  "tensordict>=0.7.1",
+  "torch>=2.6.0",
+  "torchrl>=0.7.1",
+  "torchvision>=0.21.0",
+  "tqdm>=4.67.1",
+]
+
+[project.scripts]
+reinfproj = "reinfproj:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu124" }
+torchvision = { index = "pytorch-cu124" }
+
+[dependency-groups]
+dev = ["ipykernel>=6.29.5", "ipython>=8.32.0", "ruff>=0.9.7"]
