@@ -1,3 +1,5 @@
+#:schema https://json.schemastore.org/pyproject.json
+
 [project]
 name = "reinfproj"
 version = "0.1.0"
