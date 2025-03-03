@@ -22,9 +22,9 @@ class MinesweeperState:
     num_moves: int
     events: Queue[InputEvent]
 
-    DIFF_TO_BD: dict[MsDifficulty, float] = {"Easy": 0.05, "Medium": 0.08, "Hard": 0.13}
+    __dug: set[Position]
 
-    BOMB: int = 65535
+    DIFF_TO_BD: dict[MsDifficulty, float] = {"Easy": 0.08, "Medium": 0.11, "Hard": 0.14}
 
     def __init__(
         self, cfg: MinesweeperCfg, *, difficulty: MsDifficulty = "Easy"
@@ -39,6 +39,7 @@ class MinesweeperState:
         self.num_moves = 0
         self.grid = MinesweeperState.init_grid(self.cfg, self.difficulty)
         self.events = Queue()
+        self.__dug = set()
 
     def tick(self):
         if self.is_over:
@@ -92,21 +93,45 @@ class MinesweeperState:
                 _ = self.click((ev.row, ev.col), flag=True)
 
     def click(self, pos: Position, flag: bool = False):
+        print(pos)
         self.num_moves += 1
-        tile = self.grid[pos[1]][pos[0]]
-        has_exploded = False
+        tile = self.grid[pos[0]][pos[1]]
 
         if flag:
             tile.flag()
-        else:
-            has_exploded = tile.reveal()
+            return False
 
+        has_exploded = not self.dig(pos)
         if has_exploded:
             self.is_over = True
 
         return self.is_over
 
+    def dig(self, pos: Position):
+        self.__dug.add(pos)
+        r, c = pos
+
+        tile = self.grid[r][c]
+
+        if tile.type_ == "mine":
+            tile.type_ = "exploded"
+            tile.revealed = True
+            return False
+
+        if tile.type_ == "normal" and tile.num_bombs > 0:
+            # found a clue
+            tile.revealed = True
+            return True
+
+        tile.revealed = True
+        for row in range(max(0, r - 1), min(self.cfg.ROWS - 1, r + 1) + 1):
+            for col in range(max(0, c - 1), min(self.cfg.COLS - 1, c + 1) + 1):
+                if (row, col) not in self.__dug:
+                    _ = self.dig((row, col))
+
+        return True
+
     def end_game_reveal(self):
         for col in self.grid:
             for tile in col:
-                _ = tile.reveal(check_mine=False)
+                tile.revealed = True

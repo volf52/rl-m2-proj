@@ -49,9 +49,9 @@ class Minesweeper:
                     print(mx, my)
 
                     if ev.button == 1:  # click
-                        self.state.events.put(events.Clicked(my, mx))
+                        self.state.events.put(events.Clicked(mx, my))
                     elif ev.button == 3:  # flag
-                        self.state.events.put(events.Flagged(my, mx))
+                        self.state.events.put(events.Flagged(mx, my))
 
             out_ev = self.tick()
             match out_ev:

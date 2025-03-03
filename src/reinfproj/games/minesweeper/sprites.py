@@ -62,11 +62,3 @@ class Tile:
     def flag(self):
         if not self.revealed:
             self.flagged = not self.flagged
-
-    def reveal(self, check_mine: bool = True) -> bool:
-        self.revealed = True
-        if check_mine and self.type_ == "mine":
-            self.type_ = "exploded"
-            return True
-
-        return False
