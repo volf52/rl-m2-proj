@@ -23,11 +23,11 @@ class Minesweeper:
             self.view.close()
 
     def tick(self):
-        cond = self.state.tick()
+        out_ev = self.state.tick()
         if self.view is not None:
             self.view.render(self.state)
 
-        return cond
+        return out_ev
 
     def run_human_mode(self):
         assert self.view is not None, "requires show_window"
@@ -41,12 +41,9 @@ class Minesweeper:
 
                 if ev.type == pygame.MOUSEBUTTONDOWN:
                     mx, my = pygame.mouse.get_pos()
-                    print(mx, my)
 
                     mx //= self.state.cfg.TILESIZE
                     my //= self.state.cfg.TILESIZE
-
-                    print(mx, my)
 
                     if ev.button == 1:  # click
                         self.state.events.put(events.Clicked(mx, my))
@@ -56,9 +53,10 @@ class Minesweeper:
             out_ev = self.tick()
             match out_ev:
                 case events.Win():
-                    print(f"Score: {self.state.num_moves}")
+                    print(f"Won::Score: {self.state.num_moves}")
+                case events.Lost():
+                    print(f"Lost::Score: {self.state.num_moves}")
                 case events.Exploded():
-                    print(f"Score: {self.state.num_moves}")
-                    print("Exploded")
+                    print(f"Exploded::Score: {self.state.num_moves}")
                 case _:
                     pass

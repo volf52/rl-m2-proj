@@ -4,7 +4,7 @@ import random
 from typing import Literal, TypeAlias
 
 from reinfproj.games.minesweeper import events
-from reinfproj.games.minesweeper.events import InputEvent
+from reinfproj.games.minesweeper.events import InputEvent, OutputEvent
 from reinfproj.games.minesweeper.sprites import Tile
 from reinfproj.games.minesweeper.types import Position
 from reinfproj.games.minesweeper.config import MinesweeperCfg
@@ -23,6 +23,9 @@ class MinesweeperState:
     events: Queue[InputEvent]
 
     __dug: set[Position]
+    __num_flags: int
+    __num_bombs: int
+    __first_click: bool
 
     DIFF_TO_BD: dict[MsDifficulty, float] = {"Easy": 0.08, "Medium": 0.11, "Hard": 0.14}
 
@@ -31,32 +34,33 @@ class MinesweeperState:
     ) -> None:
         self.cfg = cfg
         self.difficulty = difficulty
+        self.__first_click = True
+        self.__num_flags = 0
 
         self.reset()
 
     def reset(self):
         self.is_over = False
         self.num_moves = 0
-        self.grid = MinesweeperState.init_grid(self.cfg, self.difficulty)
+        self.grid, self.__num_bombs = MinesweeperState.init_grid(
+            self.cfg, self.difficulty
+        )
         self.events = Queue()
         self.__dug = set()
 
     def tick(self):
         if self.is_over:
-            return None
+            return events.Nothing()
 
         while not self.events.empty():
             ev = self.events.get()
-            exploded = self.process_event(ev)
-            if exploded:
-                return events.Exploded(self.num_moves)
-            elif self.is_over:
-                return events.Win(self.num_moves)
+            out_ev = self.process_event(ev)
+            return out_ev
 
         return None
 
     @staticmethod
-    def init_grid(cfg: MinesweeperCfg, difficulty: MsDifficulty) -> MsGrid:
+    def init_grid(cfg: MinesweeperCfg, difficulty: MsDifficulty) -> tuple[MsGrid, int]:
         grid: MsGrid = [
             [Tile((col * cfg.TILESIZE, row * cfg.TILESIZE)) for row in range(cfg.WIDTH)]
             for col in range(cfg.HEIGHT)
@@ -66,46 +70,101 @@ class MinesweeperState:
         random.shuffle(positions)
 
         num_bombs = math.ceil(MinesweeperState.DIFF_TO_BD[difficulty] * len(positions))
-        bomb_positions = random.choices(positions, k=num_bombs)
-        print("num bombs", num_bombs, len(positions))
+        bomb_positions = random.sample(positions, k=num_bombs)
+        # bomb_positions = [(1, 0), (1, 1), (1, 2), (10, 10)]
 
-        valid_ii_range = range(cfg.ROWS)
-        valid_jj_range = range(cfg.COLS)
+        valid_ii_range = range(cfg.COLS)
+        valid_jj_range = range(cfg.ROWS)
 
         for j, i in bomb_positions:
             grid[j][i].type_ = "mine"
 
             for jj in range(j - 1, j + 2):
                 for ii in range(i - 1, i + 2):
-                    if ii in valid_ii_range and jj in valid_jj_range:
+                    if (ii, jj) == (i, j) or grid[jj][ii].type_ == "mine":
+                        pass
+                    elif ii in valid_ii_range and jj in valid_jj_range:
                         grid[jj][ii].num_bombs += 1
 
-        return grid
+        return grid, num_bombs
 
-    def process_event(self, ev: InputEvent):
+    def process_event(self, ev: InputEvent) -> OutputEvent:
         match ev:
             case events.Clicked():
-                exploded = self.click((ev.row, ev.col))
-
-                return exploded
+                return self.click((ev.row, ev.col))
 
             case events.Flagged():
-                _ = self.click((ev.row, ev.col), flag=True)
+                return self.click((ev.row, ev.col), flag=True)
 
-    def click(self, pos: Position, flag: bool = False):
-        print(pos)
-        self.num_moves += 1
+    def click(self, pos: Position, flag: bool = False) -> OutputEvent:
+        # print("flags", self.__num_flags, "bombs", self.__num_bombs)
         tile = self.grid[pos[0]][pos[1]]
+        if tile.revealed:
+            return events.AlreadyRevealed()
+
+        self.num_moves += 1
+        ev: OutputEvent = events.Nothing()
 
         if flag:
-            tile.flag()
-            return False
+            already_flagged = tile.flag()
+            if tile.flagged:
+                self.__num_flags += 1
+            else:
+                self.__num_flags -= 1
 
-        has_exploded = not self.dig(pos)
-        if has_exploded:
-            self.is_over = True
+            self.is_over = self.check_ended()
+            if not self.is_over and already_flagged:
+                return events.AlreadyFlagged()
 
-        return self.is_over
+        else:
+            has_exploded = not self.dig(pos)
+            if has_exploded and self.__first_click:
+                self.grid, self.__num_bombs = MinesweeperState.init_grid(
+                    self.cfg, self.difficulty
+                )
+                has_exploded = not self.dig(pos)
+                self.__first_click = False
+
+                if has_exploded:
+                    self.is_over = True
+                    self.end_game_reveal()
+
+                    return events.Exploded(self.num_moves)
+
+            if not has_exploded:
+                self.is_over = self.check_ended()
+
+        if self.is_over:
+            self.end_game_reveal()
+            if self.check_win():
+                ev = events.Win(self.num_moves)
+            else:
+                ev = events.Lost(self.num_moves)
+
+        return ev
+
+    def check_ended(self):
+        if self.__num_flags >= self.__num_bombs:
+            return True
+        for col in self.grid:
+            for tile in col:
+                if tile.type_ == "normal" and not tile.flagged and not tile.revealed:
+                    return False
+
+        return True
+
+    def check_win(self):
+        for col in self.grid:
+            for tile in col:
+                if tile.type_ == "exploded":
+                    return False
+                if tile.type_ == "mine" and not tile.flagged:
+                    return False
+
+                if tile.type_ == "normal" and tile.flagged:
+                    return False
+
+        return True
 
     def dig(self, pos: Position):
         self.__dug.add(pos)
@@ -134,4 +193,4 @@ class MinesweeperState:
     def end_game_reveal(self):
         for col in self.grid:
             for tile in col:
-                tile.revealed = True
+                tile.end_game_reveal()

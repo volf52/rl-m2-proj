@@ -3,7 +3,7 @@ from reinfproj.games.minesweeper.config import MinesweeperCfg
 from reinfproj.games.minesweeper.types import Position
 import pygame
 
-TileType = Literal["normal", "mine", "exploded"]
+TileType = Literal["normal", "mine", "exploded", "notmine"]
 
 
 class Tile:
@@ -13,12 +13,15 @@ class Tile:
     num_bombs: int
     type_: TileType
 
+    __was_already_flagged: bool
+
     def __init__(self, pos: Position):
         self.pos = pos
-        self.revealed = False
+        self.revealed = True
         self.flagged = False
         self.num_bombs = 0
         self.type_ = "normal"
+        self.__was_already_flagged = False
 
     def render(self, surf: pygame.Surface, cfg: MinesweeperCfg):
         to_blit: pygame.Surface
@@ -53,6 +56,8 @@ class Tile:
                 to_blit = cfg.TileMine
             case ("mine", _, False, _):
                 to_blit = cfg.TileUnknown
+            case ("notmine", _, _, _):
+                to_blit = cfg.TileNotMine
 
             case ("exploded", _, _, _):
                 to_blit = cfg.TileExploded
@@ -60,5 +65,13 @@ class Tile:
         _ = surf.blit(to_blit, self.pos)
 
     def flag(self):
-        if not self.revealed:
-            self.flagged = not self.flagged
+        self.flagged = not self.flagged
+        old_was_already_flagged = self.__was_already_flagged
+        self.__was_already_flagged = True
+
+        return old_was_already_flagged
+
+    def end_game_reveal(self):
+        self.revealed = True
+        if self.flagged and self.type_ != "mine":
+            self.type_ = "notmine"

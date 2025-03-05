@@ -27,4 +27,26 @@ class Exploded:
     num_moves: int
 
 
-OutputEvent: TypeAlias = Win | Exploded
+@dataclass
+class Lost:
+    num_moves: int
+
+
+@dataclass
+class Nothing:
+    pass
+
+
+@dataclass
+class AlreadyFlagged:
+    pass
+
+
+@dataclass
+class AlreadyRevealed:
+    pass
+
+
+OutputEvent: TypeAlias = (
+    Win | Exploded | Lost | Nothing | AlreadyFlagged | AlreadyRevealed
+)
