@@ -37,7 +37,11 @@ class MinesweeperState:
         self.__first_click = True
         self.__num_flags = 0
 
-        self.reset()
+        self.events = Queue()
+        self.__dug = set()
+        self.grid, self.__num_bombs = MinesweeperState.init_grid(cfg, difficulty)
+        self.is_over = False
+        self.num_moves = 0
 
     def reset(self):
         self.is_over = False
@@ -47,6 +51,8 @@ class MinesweeperState:
         )
         self.events = Queue()
         self.__dug = set()
+
+        return events.Nothing()
 
     def tick(self):
         if self.is_over:
@@ -71,7 +77,6 @@ class MinesweeperState:
 
         num_bombs = math.ceil(MinesweeperState.DIFF_TO_BD[difficulty] * len(positions))
         bomb_positions = random.sample(positions, k=num_bombs)
-        # bomb_positions = [(1, 0), (1, 1), (1, 2), (10, 10)]
 
         valid_ii_range = range(cfg.COLS)
         valid_jj_range = range(cfg.ROWS)

@@ -17,7 +17,7 @@ class Tile:
 
     def __init__(self, pos: Position):
         self.pos = pos
-        self.revealed = True
+        self.revealed = False
         self.flagged = False
         self.num_bombs = 0
         self.type_ = "normal"
