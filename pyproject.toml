@@ -8,16 +8,22 @@ readme = "README.md"
 authors = [{ name = "Arslan", email = "rslnkrmt2552@gmail.com" }]
 requires-python = ">=3.11"
 dependencies = [
+  "benchmarl>=1.4.0",
   "gymnasium[atari,toytext]>=1.1.0",
+  "ludopy>=1.5.0",
   "matplotlib>=3.10.0",
   "numpy>=2.1.2",
+  "optuna>=4.2.1",
+  "pettingzoo[classic]>=1.10.0",
   "pygame>=2.6.1",
   "seaborn>=0.13.2",
+  "shimmy>=2.0.0",
   "tensordict>=0.7.1",
   "torch>=2.6.0",
   "torchrl>=0.7.1",
   "torchvision>=0.21.0",
   "tqdm>=4.67.1",
+  "vmas[all]>=1.5.0",
 ]
 
 [project.scripts]
