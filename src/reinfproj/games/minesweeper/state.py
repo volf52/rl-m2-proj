@@ -105,6 +105,7 @@ class MinesweeperState:
         # print("flags", self.__num_flags, "bombs", self.__num_bombs)
         tile = self.grid[pos[0]][pos[1]]
         if tile.revealed:
+            self.__first_click = False
             return events.AlreadyRevealed()
 
         self.num_moves += 1
@@ -124,17 +125,20 @@ class MinesweeperState:
         else:
             has_exploded = not self.dig(pos)
             if has_exploded and self.__first_click:
+                self.__first_click = False
                 self.grid, self.__num_bombs = MinesweeperState.init_grid(
                     self.cfg, self.difficulty
                 )
                 has_exploded = not self.dig(pos)
-                self.__first_click = False
 
-                if has_exploded:
-                    self.is_over = True
-                    self.end_game_reveal()
+            if has_exploded:
+                self.is_over = True
+                print("Exploded")
+                self.end_game_reveal()
 
-                    return events.Exploded(self.num_moves)
+                return events.Exploded(self.num_moves)
+
+            self.__first_click = False
 
             if not has_exploded:
                 self.is_over = self.check_ended()
